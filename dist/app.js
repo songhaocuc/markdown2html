@@ -1,0 +1,60 @@
+"use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var markdown_1 = require("markdown");
+var fs = __importStar(require("fs"));
+var path = __importStar(require("path"));
+// let markdown_file:string = fs.readFileSync("test.md").toString();
+// console.log(markdown_file);
+// let html_file:string = markdown.toHTML(markdown_file);
+// fs.writeFileSync("test.html", html_file);
+// markdown文件转为HTML文件
+function convertFile(sourceFile, targetFile) {
+    try {
+        var markdownFile = fs.readFileSync(sourceFile).toString();
+        var htmlFile = markdown_1.markdown.toHTML(markdownFile);
+        fs.writeFileSync(targetFile, htmlFile);
+    }
+    catch (error) {
+        console.log(error.toString());
+    }
+}
+function findFileBySuffix(sourceDir, ext) {
+    var files = [];
+    console.log(sourceDir);
+    var dirArray = fs.readdirSync(sourceDir);
+    for (var _i = 0, dirArray_1 = dirArray; _i < dirArray_1.length; _i++) {
+        var d = dirArray_1[_i];
+        var filePath = path.join(sourceDir, d);
+        var stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            files = files.concat(findFileBySuffix(filePath, ext));
+        }
+        if (stat.isFile() && path.extname(filePath) === ext) {
+            files.push(filePath);
+        }
+    }
+    return files;
+}
+// 将路径中的所有markdown文件转换为HTML文件
+function convertDir(sourceDir, targetDir) {
+    sourceDir = path.join(sourceDir, "");
+    targetDir = path.join(targetDir, "");
+    var files = findFileBySuffix(sourceDir, ".md");
+    for (var _i = 0, files_1 = files; _i < files_1.length; _i++) {
+        var file = files_1[_i];
+        var target = file.replace(sourceDir, targetDir);
+        convertFile(file, target);
+    }
+}
+console.log(findFileBySuffix("markdown", ".md"));
+var argv = process.argv;
+console.log(argv)
+convertDir(argv[2], argv[3]);
+//# sourceMappingURL=app.js.map
