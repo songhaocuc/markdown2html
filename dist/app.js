@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -7,19 +10,17 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var markdown_1 = require("markdown");
+var showdown_1 = __importDefault(require("showdown"));
 var fs = __importStar(require("fs"));
 var path = __importStar(require("path"));
-// let markdown_file:string = fs.readFileSync("test.md").toString();
-// console.log(markdown_file);
-// let html_file:string = markdown.toHTML(markdown_file);
-// fs.writeFileSync("test.html", html_file);
+var converter = new showdown_1.default.Converter();
 // markdown文件转为HTML文件
 function convertFile(sourceFile, targetFile) {
     try {
         checkDirExist(path.dirname(targetFile));
         var markdownFile = fs.readFileSync(sourceFile).toString();
-        var htmlFile = markdown_1.markdown.toHTML(markdownFile);
+        var htmlFile = converter.makeHtml(markdownFile);
+        htmlFile = htmlFile.replace(/\.md/g, ".html");
         fs.writeFileSync(targetFile, htmlFile);
     }
     catch (error) {

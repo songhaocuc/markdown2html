@@ -1,18 +1,16 @@
-import { markdown } from "markdown";
+import showdown from "showdown";
 import * as fs from "fs";
 import * as path from "path";
 
-// let markdown_file:string = fs.readFileSync("test.md").toString();
-// console.log(markdown_file);
-// let html_file:string = markdown.toHTML(markdown_file);
-// fs.writeFileSync("test.html", html_file);
+let converter = new showdown.Converter();
 
 // markdown文件转为HTML文件
 function convertFile(sourceFile: string, targetFile: string): void {
     try {
         checkDirExist(path.dirname(targetFile));
         let markdownFile = fs.readFileSync(sourceFile).toString();
-        let htmlFile = markdown.toHTML(markdownFile);
+        let htmlFile = converter.makeHtml(markdownFile);
+        htmlFile= htmlFile.replace(/\.md/g, ".html");
         fs.writeFileSync(targetFile, htmlFile);
     } catch (error) {
         console.log(error.toString());

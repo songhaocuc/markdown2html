@@ -12,7 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "@types/node": "^12.7.5",
-    "markdown": "^0.5.0"
+    "@types/showdown": "^1.9.3",
+    "showdown": "^1.9.0"
   },
   "devDependencies": {
     "electron-builder": "^21.2.0"
