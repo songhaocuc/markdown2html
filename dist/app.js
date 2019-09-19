@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -10,16 +10,57 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var showdown_1 = __importDefault(require("showdown"));
+var markdown_it_1 = __importDefault(require("markdown-it"));
+var highlight_js_1 = __importDefault(require("highlight.js"));
 var fs = __importStar(require("fs"));
 var path = __importStar(require("path"));
-var converter = new showdown_1.default.Converter();
+var util_1 = require("./util");
+var md = new markdown_it_1.default({
+    html: true,
+    highlight: function (str, lang) {
+        if (lang && highlight_js_1.default.getLanguage(lang)) {
+            try {
+                return '<pre><code>' +
+                    highlight_js_1.default.highlight(lang, str, true).value +
+                    '</code></pre>';
+            }
+            catch (__) { }
+        }
+        return '<pre><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+    }
+});
+var slugCounts = {};
+addNamedHeaders(md);
+// Adapted from <https://github.com/leff/markdown-it-named-headers/blob/master/index.js>
+// and <https://github.com/Microsoft/vscode/blob/cadd6586c6656e0c7df3b15ad01c5c4030da5d46/extensions/markdown-language-features/src/markdownEngine.ts#L225>
+function addNamedHeaders(md) {
+    var originalHeadingOpen = md.renderer.rules.heading_open;
+    md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
+        var title = tokens[idx + 1].children.reduce(function (acc, t) { return acc + t.content; }, '');
+        var slug = util_1.slugify(title);
+        if (slugCounts.hasOwnProperty(slug)) {
+            slugCounts[slug] += 1;
+            slug += '-' + slugCounts[slug];
+        }
+        else {
+            slugCounts[slug] = 0;
+        }
+        tokens[idx].attrs = tokens[idx].attrs || [];
+        tokens[idx].attrs.push(['id', slug]);
+        if (originalHeadingOpen) {
+            return originalHeadingOpen(tokens, idx, options, env, self);
+        }
+        else {
+            return self.renderToken(tokens, idx, options);
+        }
+    };
+}
 // markdown文件转为HTML文件
 function convertFile(sourceFile, targetFile) {
     try {
         checkDirExist(path.dirname(targetFile));
         var markdownFile = fs.readFileSync(sourceFile).toString();
-        var htmlFile = converter.makeHtml(markdownFile);
+        var htmlFile = md.render(markdownFile);
         htmlFile = htmlFile.replace(/\.md/g, ".html");
         fs.writeFileSync(targetFile, htmlFile);
     }
