@@ -1,113 +1,49 @@
-'use strict';
+import converter from "./Converter";
+import ArgumentParser from "argparse";
 
-
-import MarkdownIt from "markdown-it";
-import hljs from "highlight.js";
-import * as fs from "fs";
-import * as path from "path";
-import { slugify } from './util';
-
-let md:MarkdownIt = new MarkdownIt({
-    html: true,
-    highlight: function (str, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            try {
-                return '<pre><code>' +
-                    hljs.highlight(lang, str, true).value +
-                    '</code></pre>';
-            } catch (__) { }
-        }
-        return '<pre><code>' + md.utils.escapeHtml(str) + '</code></pre>';
-    }
+var parser = new ArgumentParser.ArgumentParser({
+    version: '0.0.1',
+    addHelp: true,
+    description: 'Markdown to HTML Converter.'
 });
-let slugCounts: { [key: string]: number; }  = {};
-addNamedHeaders(md);
 
-// Adapted from <https://github.com/leff/markdown-it-named-headers/blob/master/index.js>
-// and <https://github.com/Microsoft/vscode/blob/cadd6586c6656e0c7df3b15ad01c5c4030da5d46/extensions/markdown-language-features/src/markdownEngine.ts#L225>
-function addNamedHeaders(md: MarkdownIt): void {
-    const originalHeadingOpen = md.renderer.rules.heading_open;
-
-    md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
-        const title = tokens[idx + 1].children.reduce((acc: string, t: any) => acc + t.content, '');
-        let slug = slugify(title);
-
-        if (slugCounts.hasOwnProperty(slug)) {
-            slugCounts[slug] += 1;
-            slug += '-' + slugCounts[slug];
-        } else {
-            slugCounts[slug] = 0;
-        }
-
-        tokens[idx].attrs = tokens[idx].attrs || [];
-        tokens[idx].attrs.push(['id', slug]);
-
-        if (originalHeadingOpen) {
-            return originalHeadingOpen(tokens, idx, options, env, self);
-        } else {
-            return self.renderToken(tokens, idx, options);
-        }
-    };
-}
-
-// markdown文件转为HTML文件
-function convertFile(sourceFile: string, targetFile: string): void {
-    try {
-        checkDirExist(path.dirname(targetFile));
-        let markdownFile = fs.readFileSync(sourceFile).toString();
-        let htmlFile = md.render(markdownFile);
-        htmlFile = htmlFile.replace(/\.md/g, ".html");
-        fs.writeFileSync(targetFile, htmlFile);
-    } catch (error) {
-        console.log(error.toString());
+parser.addArgument(
+    ['-i', '--input'],{
+        required: true,
+        help:'input file or dir name.(default file, set by "-m" or "--mode")'
     }
-}
+);
 
-// 根据后缀名查找文件
-function findFileBySuffix(sourceDir: string, ext: string): string[] {
-    let files: string[] = [];
-    let dirArray = fs.readdirSync(sourceDir);
-    for (let d of dirArray) {
-        let filePath = path.join(sourceDir, d)
-        let stat = fs.statSync(filePath)
-        if (stat.isDirectory()) {
-            files = files.concat(findFileBySuffix(filePath, ext))
-        }
-        if (stat.isFile() && path.extname(filePath) === ext) {
-            files.push(filePath)
-        }
+parser.addArgument(
+    ['-o', '--output'],{
+        help:'out file or dir name.(same mode as input)'
     }
-    return files
-}
+);
 
-
-// 将路径中的所有markdown文件转换为HTML文件
-function convertDir(sourceDir: string, targetDir: string): void {
-    sourceDir = path.join(sourceDir, "");
-    targetDir = path.join(targetDir, "");
-    let files = findFileBySuffix(sourceDir, ".md");
-    for (let file of files) {
-        let target: string = file.replace(sourceDir, targetDir);
-        target = target.replace(/\.[^/.]+$/, ".html");
-        convertFile(file, target);
+parser.addArgument(
+    ['-m', '--mode'],{
+        defaultValue: 'file',
+        help:'assign mode("file" or "dir", default file).Default same as Input'
     }
-}
+);
 
-// 检查路径
-function checkDirExist(folderpath: string): void {
-    folderpath = path.join(folderpath);
-    const pathArr: string[] = folderpath.split(path.sep);
-    let _path: string = '.';
-    for (let i = 0; i < pathArr.length; i++) {
-        if (pathArr[i]) {
-            _path = path.join(_path, pathArr[i]);
-            console.log(_path);
-            if (!fs.existsSync(_path)) {
-                fs.mkdirSync(_path);
-            }
-        }
+let args = parser.parseArgs();
+// console.dir(args);
+
+let input:string = args["input"];
+let output:string = args["output"];
+let mode:string = args["mode"];
+
+if(mode === "file"){
+    if(input.indexOf(".md") < 0 && input.indexOf(".markdown")){
+        console.log("input file should be markdown(.md or .markdown) file.");
+    }else{
+        output = output || input.replace(/\.[^/.]+$/, ".html");
+        converter.convertFile(input, output);
     }
+}else if (mode === "dir"){
+    output = input;
+    converter.convertDir(input, output);
+}else{
+    console.log('error mode, please see "-h" or "--help"');
 }
-
-const argv = process.argv;
-convertDir(argv[2], argv[3]);

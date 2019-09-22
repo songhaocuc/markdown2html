@@ -1,117 +1,45 @@
-'use strict';
+"use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-var markdown_it_1 = __importDefault(require("markdown-it"));
-var highlight_js_1 = __importDefault(require("highlight.js"));
-var fs = __importStar(require("fs"));
-var path = __importStar(require("path"));
-var util_1 = require("./util");
-var md = new markdown_it_1.default({
-    html: true,
-    highlight: function (str, lang) {
-        if (lang && highlight_js_1.default.getLanguage(lang)) {
-            try {
-                return '<pre><code>' +
-                    highlight_js_1.default.highlight(lang, str, true).value +
-                    '</code></pre>';
-            }
-            catch (__) { }
-        }
-        return '<pre><code>' + md.utils.escapeHtml(str) + '</code></pre>';
-    }
+var Converter_1 = __importDefault(require("./Converter"));
+var argparse_1 = __importDefault(require("argparse"));
+var parser = new argparse_1.default.ArgumentParser({
+    version: '0.0.1',
+    addHelp: true,
+    description: 'Markdown to HTML Converter.'
 });
-var slugCounts = {};
-addNamedHeaders(md);
-// Adapted from <https://github.com/leff/markdown-it-named-headers/blob/master/index.js>
-// and <https://github.com/Microsoft/vscode/blob/cadd6586c6656e0c7df3b15ad01c5c4030da5d46/extensions/markdown-language-features/src/markdownEngine.ts#L225>
-function addNamedHeaders(md) {
-    var originalHeadingOpen = md.renderer.rules.heading_open;
-    md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
-        var title = tokens[idx + 1].children.reduce(function (acc, t) { return acc + t.content; }, '');
-        var slug = util_1.slugify(title);
-        if (slugCounts.hasOwnProperty(slug)) {
-            slugCounts[slug] += 1;
-            slug += '-' + slugCounts[slug];
-        }
-        else {
-            slugCounts[slug] = 0;
-        }
-        tokens[idx].attrs = tokens[idx].attrs || [];
-        tokens[idx].attrs.push(['id', slug]);
-        if (originalHeadingOpen) {
-            return originalHeadingOpen(tokens, idx, options, env, self);
-        }
-        else {
-            return self.renderToken(tokens, idx, options);
-        }
-    };
-}
-// markdown文件转为HTML文件
-function convertFile(sourceFile, targetFile) {
-    try {
-        checkDirExist(path.dirname(targetFile));
-        var markdownFile = fs.readFileSync(sourceFile).toString();
-        var htmlFile = md.render(markdownFile);
-        htmlFile = htmlFile.replace(/\.md/g, ".html");
-        fs.writeFileSync(targetFile, htmlFile);
+parser.addArgument(['-i', '--input'], {
+    required: true,
+    help: 'input file or dir name.(default file, set by "-m" or "--mode")'
+});
+parser.addArgument(['-o', '--output'], {
+    help: 'out file or dir name.(same mode as input)'
+});
+parser.addArgument(['-m', '--mode'], {
+    defaultValue: 'file',
+    help: 'assign mode("file" or "dir", default file).Default same as Input'
+});
+var args = parser.parseArgs();
+// console.dir(args);
+var input = args["input"];
+var output = args["output"];
+var mode = args["mode"];
+if (mode === "file") {
+    if (input.indexOf(".md") < 0 && input.indexOf(".markdown")) {
+        console.log("input file should be markdown(.md or .markdown) file.");
     }
-    catch (error) {
-        console.log(error.toString());
+    else {
+        output = output || input.replace(/\.[^/.]+$/, ".html");
+        Converter_1.default.convertFile(input, output);
     }
 }
-// 根据后缀名查找文件
-function findFileBySuffix(sourceDir, ext) {
-    var files = [];
-    var dirArray = fs.readdirSync(sourceDir);
-    for (var _i = 0, dirArray_1 = dirArray; _i < dirArray_1.length; _i++) {
-        var d = dirArray_1[_i];
-        var filePath = path.join(sourceDir, d);
-        var stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-            files = files.concat(findFileBySuffix(filePath, ext));
-        }
-        if (stat.isFile() && path.extname(filePath) === ext) {
-            files.push(filePath);
-        }
-    }
-    return files;
+else if (mode === "dir") {
+    output = input;
+    Converter_1.default.convertDir(input, output);
 }
-// 将路径中的所有markdown文件转换为HTML文件
-function convertDir(sourceDir, targetDir) {
-    sourceDir = path.join(sourceDir, "");
-    targetDir = path.join(targetDir, "");
-    var files = findFileBySuffix(sourceDir, ".md");
-    for (var _i = 0, files_1 = files; _i < files_1.length; _i++) {
-        var file = files_1[_i];
-        var target = file.replace(sourceDir, targetDir);
-        target = target.replace(/\.[^/.]+$/, ".html");
-        convertFile(file, target);
-    }
+else {
+    console.log('error mode, please see "-h" or "--help"');
 }
-// 检查路径
-function checkDirExist(folderpath) {
-    folderpath = path.join(folderpath);
-    var pathArr = folderpath.split(path.sep);
-    var _path = '.';
-    for (var i = 0; i < pathArr.length; i++) {
-        if (pathArr[i]) {
-            _path = path.join(_path, pathArr[i]);
-            console.log(_path);
-            if (!fs.existsSync(_path)) {
-                fs.mkdirSync(_path);
-            }
-        }
-    }
-}
-var argv = process.argv;
-convertDir(argv[2], argv[3]);
 //# sourceMappingURL=app.js.map

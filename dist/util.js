@@ -1,8 +1,4 @@
 'use strict';
-/*************************
-Copy from https://github.com/yzhang-gh/vscode-markdown
-****************************/
-
 Object.defineProperty(exports, "__esModule", { value: true });
 /* ┌─────────────────┐
    │ Text Extraction │
