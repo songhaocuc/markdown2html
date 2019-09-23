@@ -2,7 +2,7 @@
 For personal usage:   
 markdown2html with **dir**   
 ```
-node ./build/markdown2html.js -i{markdowndir} [-o {htmldir}] -m "dir"
+node ./build/markdown2html.js -i{markdowndir} [-o {htmldir}] -m dir
 ```
 markdown2html with **file**   
 ```

@@ -42,7 +42,7 @@ if(mode === "file"){
         converter.convertFile(input, output);
     }
 }else if (mode === "dir"){
-    output = input;
+    output = output || input;
     converter.convertDir(input, output);
 }else{
     console.log('error mode, please see "-h" or "--help"');
